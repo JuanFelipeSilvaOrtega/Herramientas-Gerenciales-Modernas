@@ -122,6 +122,10 @@
             animation: fadeIn 1s ease-in;
         }
 
+        .main-content.active {
+            display: block;
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -280,6 +284,12 @@
             border-radius: 10px;
             padding: 20px;
             margin: 20px 0;
+            min-height: 400px;
+        }
+
+        .chart-container canvas {
+            max-width: 100%;
+            height: auto !important;
         }
 
         .analysis-grid {
@@ -377,6 +387,10 @@
             .cover-spacing {
                 height: 25px;
             }
+
+            .chart-container {
+                min-height: 300px;
+            }
         }
     </style>
 </head>
@@ -399,7 +413,7 @@
             
             <p class="cover-date">14 DE SEPTIEMBRE DE 2025</p>
             
-            <button class="enter-btn" onclick="enterPresentation()">INICIAR PRESENTACIÓN</button>
+            <button class="enter-btn" id="enterBtn">INICIAR PRESENTACIÓN</button>
         </div>
     </div>
 
@@ -412,10 +426,10 @@
             </div>
 
             <div class="nav-tabs">
-                <button class="nav-tab active" onclick="showTab('puntos')">Puntos Sensibles</button>
-                <button class="nav-tab" onclick="showTab('dashboard')">Dashboard KPIs</button>
-                <button class="nav-tab" onclick="showTab('analisis')">Análisis</button>
-                <button class="nav-tab" onclick="showTab('conclusion')">Conclusiones</button>
+                <button class="nav-tab active" data-tab="puntos">Puntos Sensibles</button>
+                <button class="nav-tab" data-tab="dashboard">Dashboard KPIs</button>
+                <button class="nav-tab" data-tab="analisis">Análisis</button>
+                <button class="nav-tab" data-tab="conclusion">Conclusiones</button>
             </div>
 
             <div id="puntos" class="tab-content active">
@@ -521,11 +535,15 @@
                         </div>
 
                         <div class="chart-container">
-                            <canvas id="competitiveChart" width="400" height="200"></canvas>
+                            <canvas id="competitiveChart"></canvas>
                         </div>
 
                         <div class="chart-container">
-                            <canvas id="monthlyGrowthChart" width="400" height="200"></canvas>
+                            <canvas id="monthlyGrowthChart"></canvas>
+                        </div>
+
+                        <div class="chart-container">
+                            <canvas id="kpiTrendsChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -629,367 +647,332 @@
     </div>
 
     <script>
+        // Variables globales para los gráficos
+        let competitiveChart = null;
+        let monthlyGrowthChart = null;
+        let kpiTrendsChart = null;
+
+        // Función para entrar a la presentación
         function enterPresentation() {
             document.getElementById('coverPage').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
+            document.getElementById('mainContent').classList.add('active');
         }
 
+        // Event listener para el botón de iniciar presentación
+        document.addEventListener('DOMContentLoaded', function() {
+            const enterBtn = document.getElementById('enterBtn');
+            enterBtn.addEventListener('click', enterPresentation);
+
+            // Event listeners para los tabs
+            const tabButtons = document.querySelectorAll('.nav-tab');
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const tabName = this.getAttribute('data-tab');
+                    showTab(tabName);
+                });
+            });
+        });
+
+        // Función para mostrar tabs
         function showTab(tabName) {
-            // Hide all tabs
+            // Ocultar todos los contenidos de tabs
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
             
-            // Remove active class from all nav tabs
+            // Remover clase active de todos los botones de tab
             document.querySelectorAll('.nav-tab').forEach(tab => {
                 tab.classList.remove('active');
             });
             
-            // Show selected tab
+            // Mostrar el tab seleccionado
             document.getElementById(tabName).classList.add('active');
             
-            // Add active class to clicked nav tab
-            event.target.classList.add('active');
+            // Agregar clase active al botón clickeado
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
             
-            // Initialize charts when dashboard tab is shown
+            // Inicializar gráficos cuando se muestre el dashboard
             if (tabName === 'dashboard') {
-                setTimeout(initCharts, 100);
+                setTimeout(() => {
+                    initCharts();
+                }, 300);
             }
         }
 
+        // Función para inicializar gráficos
         function initCharts() {
-            // Competitive Position Chart
-            const ctx1 = document.getElementById('competitiveChart').getContext('2d');
-            if (window.competitiveChart) {
-                window.competitiveChart.destroy();
+            // Destruir gráficos existentes si existen
+            if (competitiveChart) {
+                competitiveChart.destroy();
             }
-            window.competitiveChart = new Chart(ctx1, {
-                type: 'radar',
-                data: {
-                    labels: ['Calidad', 'Precio', 'Presencia Digital', 'Servicio', 'Innovación', 'Distribución'],
-                    datasets: [
-                        {
-                            label: 'Natif by Issa Vásquez',
-                            data: [85, 65, 45, 70, 75, 60],
-                            backgroundColor: 'rgba(102, 126, 234, 0.2)',
-                            borderColor: 'rgba(102, 126, 234, 1)',
-                            pointBackgroundColor: 'rgba(102, 126, 234, 1)',
-                            borderWidth: 2
-                        },
-                        {
-                            label: 'Promedio Competencia',
-                            data: [75, 70, 80, 65, 60, 75],
-                            backgroundColor: 'rgba(231, 76, 60, 0.2)',
-                            borderColor: 'rgba(231, 76, 60, 1)',
-                            pointBackgroundColor: 'rgba(231, 76, 60, 1)',
-                            borderWidth: 2
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Análisis Competitivo - Natif vs Competencia'
-                        }
-                    },
-                    scales: {
-                        r: {
-                            beginAtZero: true,
-                            max: 100
-                        }
-                    }
-                }
-            });
+            if (monthlyGrowthChart) {
+                monthlyGrowthChart.destroy();
+            }
+            if (kpiTrendsChart) {
+                kpiTrendsChart.destroy();
+            }
 
-            // Monthly Growth Chart
-            const ctx2 = document.getElementById('monthlyGrowthChart').getContext('2d');
-            if (window.monthlyGrowthChart) {
-                window.monthlyGrowthChart.destroy();
-            }
-            window.monthlyGrowthChart = new Chart(ctx2, {
-                type: 'line',
-                data: {
-                    labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio'],
-                    datasets: [
-                        {
-                            label: 'Crecimiento en Ventas (%)',
-                            data: [15, 18, 23, 28, 32, 23],
-                            borderColor: 'rgba(102, 126, 234, 1)',
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        },
-                        {
-                            label: 'Satisfacción Cliente (%)',
-                            data: [65, 68, 70, 72, 75, 72],
-                            borderColor: 'rgba(39, 174, 96, 1)',
-                            backgroundColor: 'rgba(39, 174, 96, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        },
-                        {
-                            label: 'Retención de Clientes (%)',
-                            data: [30, 32, 35, 38, 40, 34],
-                            borderColor: 'rgba(230, 126, 34, 1)',
-                            backgroundColor: 'rgba(230, 126, 34, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Evolución Mensual - Indicadores Clave'
-                        },
-                        legend: {
-                            position: 'bottom'
-                        }
+            // Gráfico de Análisis Competitivo (Radar)
+            const ctx1 = document.getElementById('competitiveChart');
+            if (ctx1) {
+                competitiveChart = new Chart(ctx1, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Calidad del Producto', 'Precio Competitivo', 'Presencia Digital', 'Servicio al Cliente', 'Innovación', 'Red de Distribución'],
+                        datasets: [
+                            {
+                                label: 'Natif by Issa Vásquez',
+                                data: [85, 65, 45, 70, 75, 60],
+                                backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                                borderColor: 'rgba(102, 126, 234, 1)',
+                                pointBackgroundColor: 'rgba(102, 126, 234, 1)',
+                                pointBorderColor: '#fff',
+                                pointRadius: 5,
+                                borderWidth: 3
+                            },
+                            {
+                                label: 'Promedio Competencia',
+                                data: [75, 70, 80, 65, 60, 75],
+                                backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                                borderColor: 'rgba(231, 76, 60, 1)',
+                                pointBackgroundColor: 'rgba(231, 76, 60, 1)',
+                                pointBorderColor: '#fff',
+                                pointRadius: 5,
+                                borderWidth: 3
+                            }
+                        ]
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100,
-                            ticks: {
-                                callback: function(value) {
-                                    return value + '%';
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Análisis Competitivo - Natif vs Competencia',
+                                font: {
+                                    size: 16,
+                                    weight: 'bold'
+                                }
+                            },
+                            legend: {
+                                position: 'bottom'
+                            }
+                        },
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    stepSize: 20
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
+            }
+
+            // Gráfico de Crecimiento Mensual (Líneas)
+            const ctx2 = document.getElementById('monthlyGrowthChart');
+            if (ctx2) {
+                monthlyGrowthChart = new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio'],
+                        datasets: [
+                            {
+                                label: 'Crecimiento en Ventas (%)',
+                                data: [15, 18, 23, 28, 32, 23],
+                                borderColor: 'rgba(102, 126, 234, 1)',
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 3,
+                                pointRadius: 6,
+                                pointBorderWidth: 2,
+                                pointBackgroundColor: 'rgba(102, 126, 234, 1)',
+                                pointBorderColor: '#fff'
+                            },
+                            {
+                                label: 'Satisfacción Cliente (%)',
+                                data: [65, 68, 70, 72, 75, 72],
+                                borderColor: 'rgba(39, 174, 96, 1)',
+                                backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 3,
+                                pointRadius: 6,
+                                pointBorderWidth: 2,
+                                pointBackgroundColor: 'rgba(39, 174, 96, 1)',
+                                pointBorderColor: '#fff'
+                            },
+                            {
+                                label: 'Retención de Clientes (%)',
+                                data: [30, 32, 35, 38, 40, 34],
+                                borderColor: 'rgba(230, 126, 34, 1)',
+                                backgroundColor: 'rgba(230, 126, 34, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 3,
+                                pointRadius: 6,
+                                pointBorderWidth: 2,
+                                pointBackgroundColor: 'rgba(230, 126, 34, 1)',
+                                pointBorderColor: '#fff'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Evolución Mensual - Indicadores Clave de Rendimiento',
+                                font: {
+                                    size: 16,
+                                    weight: 'bold'
+                                }
+                            },
+                            legend: {
+                                position: 'bottom'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        }
+                    }
+                });
+            }
+
+            // Nuevo gráfico: Tendencias de KPIs (Barras)
+            const ctx3 = document.getElementById('kpiTrendsChart');
+            if (ctx3) {
+                kpiTrendsChart = new Chart(ctx3, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Satisfacción Cliente', 'Participación Mercado', 'Crecimiento Mensual', 'NPS Score', 'Retención Clientes', 'ROI Marketing'],
+                        datasets: [
+                            {
+                                label: 'Estado Actual',
+                                data: [72, 45, 23, 8.2, 34, 2.8],
+                                backgroundColor: [
+                                    'rgba(102, 126, 234, 0.8)',
+                                    'rgba(39, 174, 96, 0.8)',
+                                    'rgba(230, 126, 34, 0.8)',
+                                    'rgba(231, 76, 60, 0.8)',
+                                    'rgba(155, 89, 182, 0.8)',
+                                    'rgba(52, 152, 219, 0.8)'
+                                ],
+                                borderColor: [
+                                    'rgba(102, 126, 234, 1)',
+                                    'rgba(39, 174, 96, 1)',
+                                    'rgba(230, 126, 34, 1)',
+                                    'rgba(231, 76, 60, 1)',
+                                    'rgba(155, 89, 182, 1)',
+                                    'rgba(52, 152, 219, 1)'
+                                ],
+                                borderWidth: 2,
+                                borderRadius: 5
+                            },
+                            {
+                                label: 'Meta Objetivo',
+                                data: [85, 60, 35, 12, 50, 4.0],
+                                backgroundColor: 'rgba(46, 204, 113, 0.3)',
+                                borderColor: 'rgba(46, 204, 113, 1)',
+                                borderWidth: 2,
+                                borderRadius: 5
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'KPIs Actuales vs Objetivos - Análisis de Brechas',
+                                font: {
+                                    size: 16,
+                                    weight: 'bold'
+                                }
+                            },
+                            legend: {
+                                position: 'bottom'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        }
+                    }
+                });
+            }
         }
 
-        // Initialize the first chart when page loads if dashboard is visible
-        document.addEventListener('DOMContentLoaded', function() {
-            // Auto-initialize charts if dashboard tab is active on load
-            if (document.getElementById('dashboard').classList.contains('active')) {
-                setTimeout(initCharts, 100);
+        // Redimensionar gráficos en ventana resize
+        window.addEventListener('resize', function() {
+            if (competitiveChart) {
+                competitiveChart.resize();
+            }
+            if (monthlyGrowthChart) {
+                monthlyGrowthChart.resize();
+            }
+            if (kpiTrendsChart) {
+                kpiTrendsChart.resize();
             }
         });
 
-        // Add smooth scroll behavior for better UX
-        document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.addEventListener('click', function() {
-                // Scroll to top of content area smoothly
-                document.querySelector('.main-content').scrollTop = 0;
-            });
-        });
-
-        // Add loading animation for charts
-        function showChartLoading(canvasId) {
-            const canvas = document.getElementById(canvasId);
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.font = '16px Arial';
-            ctx.fillStyle = '#666';
-            ctx.textAlign = 'center';
-            ctx.fillText('Cargando gráfico...', canvas.width / 2, canvas.height / 2);
-        }
-
-        // Enhanced tab switching with animations
-        function showTab(tabName) {
-            // Hide all tabs with fade out
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                if (tab.classList.contains('active')) {
-                    tab.style.opacity = '0';
-                    setTimeout(() => {
-                        tab.classList.remove('active');
-                        tab.style.opacity = '1';
-                    }, 150);
-                }
-            });
-            
-            // Remove active class from all nav tabs
-            document.querySelectorAll('.nav-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // Show selected tab with fade in
-            setTimeout(() => {
-                const selectedTab = document.getElementById(tabName);
-                selectedTab.style.opacity = '0';
-                selectedTab.classList.add('active');
-                
-                // Fade in animation
-                setTimeout(() => {
-                    selectedTab.style.opacity = '1';
-                }, 10);
-                
-                // Add active class to clicked nav tab
-                event.target.classList.add('active');
-                
-                // Initialize charts when dashboard tab is shown
-                if (tabName === 'dashboard') {
-                    setTimeout(() => {
-                        showChartLoading('competitiveChart');
-                        showChartLoading('monthlyGrowthChart');
-                        setTimeout(initCharts, 500);
-                    }, 200);
-                }
-            }, 150);
-        }
-
-        // Add keyboard navigation
+        // Navegación con teclado
         document.addEventListener('keydown', function(e) {
-            if (document.getElementById('mainContent').style.display !== 'none') {
+            if (document.getElementById('mainContent').classList.contains('active')) {
                 const tabs = ['puntos', 'dashboard', 'analisis', 'conclusion'];
                 let currentIndex = -1;
                 
-                // Find current active tab
                 tabs.forEach((tab, index) => {
                     if (document.getElementById(tab).classList.contains('active')) {
                         currentIndex = index;
                     }
                 });
                 
-                // Navigate with arrow keys
                 if (e.key === 'ArrowRight' && currentIndex < tabs.length - 1) {
-                    document.querySelectorAll('.nav-tab')[currentIndex + 1].click();
+                    showTab(tabs[currentIndex + 1]);
                 } else if (e.key === 'ArrowLeft' && currentIndex > 0) {
-                    document.querySelectorAll('.nav-tab')[currentIndex - 1].click();
+                    showTab(tabs[currentIndex - 1]);
                 }
             }
         });
-
-        // Add print functionality
-        function printPresentation() {
-            window.print();
-        }
-
-        // Add export functionality (basic)
-        function exportToHTML() {
-            const htmlContent = document.documentElement.outerHTML;
-            const blob = new Blob([htmlContent], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'planeacion_estrategica_natif.html';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        // Add fullscreen functionality for presentation mode
-        function toggleFullscreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.log('Error al activar pantalla completa:', err);
-                });
-            } else {
-                document.exitFullscreen();
-            }
-        }
-
-        // Add animation effects on scroll
-        function addScrollAnimations() {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.style.opacity = '1';
-                        entry.target.style.transform = 'translateY(0)';
-                    }
-                });
-            });
-
-            document.querySelectorAll('.point-card, .analysis-card, .kpi-card').forEach(el => {
-                el.style.opacity = '0';
-                el.style.transform = 'translateY(20px)';
-                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-                observer.observe(el);
-            });
-        }
-
-        // Initialize animations when main content is shown
-        function enterPresentation() {
-            document.getElementById('coverPage').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
-            
-            // Add scroll animations after a brief delay
-            setTimeout(addScrollAnimations, 500);
-        }
-
-        // Add hover effects for better interactivity
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add hover effects to cards
-            document.querySelectorAll('.point-card').forEach(card => {
-                card.addEventListener('mouseenter', function() {
-                    this.style.transform = 'translateX(10px) scale(1.02)';
-                });
-                
-                card.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateX(0) scale(1)';
-                });
-            });
-
-            // Add click effects to KPI cards
-            document.querySelectorAll('.kpi-card').forEach(card => {
-                card.addEventListener('click', function() {
-                    this.style.transform = 'scale(1.1)';
-                    setTimeout(() => {
-                        this.style.transform = 'scale(1)';
-                    }, 200);
-                });
-            });
-        });
-
-        // Add responsive chart resizing
-        window.addEventListener('resize', function() {
-            if (window.competitiveChart) {
-                window.competitiveChart.resize();
-            }
-            if (window.monthlyGrowthChart) {
-                window.monthlyGrowthChart.resize();
-            }
-        });
-
-        // Add data update simulation for dynamic content
-        function simulateDataUpdate() {
-            const kpiValues = document.querySelectorAll('.kpi-value');
-            kpiValues.forEach(value => {
-                const originalText = value.textContent;
-                let currentValue = parseFloat(originalText);
-                
-                // Simulate small random changes
-                const change = (Math.random() - 0.5) * 0.1;
-                const newValue = Math.max(0, currentValue + change);
-                
-                // Animate the change
-                let start = currentValue;
-                const end = newValue;
-                const duration = 1000; // 1 second
-                const startTime = Date.now();
-                
-                function animate() {
-                    const elapsed = Date.now() - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-                    const current = start + (end - start) * progress;
-                    
-                    if (originalText.includes('%')) {
-                        value.textContent = Math.round(current) + '%';
-                    } else if (originalText.includes('x')) {
-                        value.textContent = current.toFixed(1) + 'x';
-                    } else {
-                        value.textContent = Math.round(current);
-                    }
-                    
-                    if (progress < 1) {
-                        requestAnimationFrame(animate);
-                    }
-                }
-                
-                animate();
-            });
-        }
-
-        // Auto-update data every 30 seconds for demo purposes
-        setInterval(simulateDataUpdate, 30000);
     </script>
 </body>
 </html>
